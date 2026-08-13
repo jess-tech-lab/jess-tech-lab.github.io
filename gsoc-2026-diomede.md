@@ -57,12 +57,12 @@ The orchestration logic is deliberately simple and transparent. The telemetry da
 - **Free disk fraction (free/total):** Derived from node statistics such as `TotalDiskSizeMB` and `TotalUncompressedSizeMB`.  
 - **Network round‑trip time (RTT):** Measured via HTTP probes against `/system`. 
 
-Each node $n$ is scored as:
+Each node **n** is scored as:
 
-$$S(n) = w_q \cdot \frac{1}{q + 1} + w_d \cdot \frac{\text{free}}{\text{total}} + w_r \cdot \frac{1}{\frac{\text{RTT}}{\text{RTT}_{\text{ref}}} + 1}$$
+> **Score(n) = w_q · (1 / (q + 1)) + w_d · (free / total) + w_r · (1 / ((RTT / RTT_ref) + 1))**
 
-where $\text{RTT}_{\text{ref}} = 100\text{ ms}$, and the default weights are:  
-$w_q = 0.5$, $w_r = 0.35$, and $w_d = 0.15$.
+where **RTT_ref = 100 ms**, and the default weights are:  
+**w_q = 0.5**, **w_r = 0.35**, and **w_d = 0.15**.
 
 Intuitively:
 
