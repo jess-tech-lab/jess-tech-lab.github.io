@@ -1,0 +1,6 @@
+remote_theme: pmarsceill/just-the-docs
+
+plugins:
+  - jekyll-remote-theme
+
+search_enabled: true
