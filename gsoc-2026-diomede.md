@@ -20,7 +20,7 @@ At a high level, Diomede introduces a self‑healing, load‑aware orchestration
 
 Key design goals:
 
-- **Avoid static configuration:** No more hard-coding a single IP + AE Title for every scanner.
+- **Avoid static configuration:** No more hard-coded IP + AE Title for every scanner.
 - **Use live telemetry:** Make routing decisions using queue depth, disk usage, and network latency.
 - **Stay compatible with existing DICOM devices:** Use an edge Orthanc + forwarder so legacy scanners don’t need changes.
 - **Preserve clinical reliability:** Maintain delivery success under node overload, failures, and recoveries.
@@ -40,7 +40,7 @@ Diomede is built as a system of cooperating services; the main components includ
   Maintains the live node registry in Redis and implements an HTTP endpoint (`/get-best-node`) that evaluates a scoring function over all healthy nodes to choose the best routing destination for each incoming study. 
 
 - **Edge agent (Orthanc + forwarder)**  
-  A local Orthanc instance acts as a DICOM receiver for existing scanners. A Python forwarder monitors new instances, retrieves image bytes, asks the orchestrator for a destination, pushes the study to the chosen cloud Orthanc node, and then removes the local copy to avoid disk exhaustion. This preserves compatibility with legacy DICOM devices while centralizing routing logic in the orchestrator.
+  A local Orthanc instance acts as a DICOM receiver for existing scanners. A multi-threaded, asynchronous Python forwarder monitors new instances, executes RTT latency probes, processes concurrent jobs, queries the orchestrator for a target destination, streams image bytes to the chosen cloud Orthanc node, and removes the local copy to prevent disk exhaustion. This preserves compatibility with legacy DICOM devices while centralizing routing logic in the orchestrator.
 
 - **Simulation scanner**  
   A Python `asyncio` + `httpx` harness that generates synthetic DICOM traffic and failure scenarios without requiring physical imaging equipment. I used this extensively for load and failover testing. 
@@ -91,13 +91,12 @@ During GSoC 2026, I focused on delivering an end‑to‑end, measurable system r
   - Health‑check logic to enforce a fixed monitoring interval (≈10 seconds) and a predictable upper bound on failover detection time. 
 
 - **Edge forwarding workflow**
-  - A Python forwarder that watches the local Orthanc for new instances, fetches image bytes, queries the orchestrator, forwards the study to the chosen cloud node, and deletes the local copy after success.  
+  - An asynchronous, multi-threaded Python forwarder that handles concurrent jobs to watch the local Orthanc, perform RTT probes, fetch image bytes, query the orchestrator, forward studies to the target cloud node, and delete local copies upon successful transfer.
   - PHI‑safe logging assumptions so that routing decisions and metrics can be audited without exposing sensitive data. 
 
 - **Simulation and benchmarking harness**
   - A synthetic scanner implementation using `asyncio` and `httpx` to generate realistic burst and concurrent traffic.  
-  - Scripts to automate routing latency measurements, routing correctness trials, failover tests, and end‑to‑end transfer benchmarks. 
-
+  - Automated scripts and Locust harnesses used for evaluating routing latency and end-to-end transfer benchmarks under concurrent load.
 ---
 
 ## Evaluation: performance and reliability
@@ -181,11 +180,12 @@ Below is an outline of where my work lives upstream.
 
 ### Selected pull requests and merge history
 
-- **Implement dynamic routing endpoint and scoring model** – PR [#184](https://github.com/KathiraveluLab/Diomede/pull/184) (`feat: orchestrator api endpoints`) & PR [#183](https://github.com/KathiraveluLab/Diomede/pull/183) (`feat: add scorer`)
+- **Implement dynamic routing endpoint and scoring model** – PR [#184](https://github.com/KathiraveluLab/Diomede/pull/184) (`feat: orchestrator api endpoints`), PR [#183](https://github.com/KathiraveluLab/Diomede/pull/183) (`feat: add scorer`), & PR [#176](https://github.com/KathiraveluLab/Diomede/pull/176) (`feat: add orchestrator Python scripts and start scripts`)
 - **Add telemetry daemon with Redis TTL‑based node health tracking** – PR [#182](https://github.com/KathiraveluLab/Diomede/pull/182) (`feat: integrate orchestrator daemon`)
 - **Edge forwarder integration with Orthanc and orchestrator** – PR [#185](https://github.com/KathiraveluLab/Diomede/pull/185) (`feat: edge agent forwarder`)
-- **Load testing and failover harness** – PR [#190](https://github.com/KathiraveluLab/Diomede/pull/190) (`feat: add Locust load tests`), PR [#187](https://github.com/KathiraveluLab/Diomede/pull/187) (`feat: testing improvements`), & PR [#181](https://github.com/KathiraveluLab/Diomede/pull/181) (`Feat: simulate DICOM file creation and transfer`)
+- **Load testing and failover harness** – PR [#190](https://github.com/KathiraveluLab/Diomede/pull/190) (`feat: add Locust load tests`), PR [#187](https://github.com/KathiraveluLab/Diomede/pull/187) (`feat: testing improvements`), PR [#186](https://github.com/KathiraveluLab/Diomede/pull/186) (`feat: end to end testing`), PR [#181](https://github.com/KathiraveluLab/Diomede/pull/181) (`Feat: simulate DICOM file creation and transfer`), & PR [#179](https://github.com/KathiraveluLab/Diomede/pull/179) (`feat: inject latency`)
 - **Performance & memory optimizations** – PR [#192](https://github.com/KathiraveluLab/Diomede/pull/192) (`enhancement: optimize memory footprint`)
+- **Docker infrastructure & repository setup** – PR [#175](https://github.com/KathiraveluLab/Diomede/pull/175) (`feat: add Docker infrastructure and Orthanc templates`) & PR [#173](https://github.com/KathiraveluLab/Diomede/pull/173) (`restructure repo skeleton`)
 - **Infrastructure, TLS, & CI security** – PR [#180](https://github.com/KathiraveluLab/Diomede/pull/180) (`feat: enable TLS`) & PR [#177](https://github.com/KathiraveluLab/Diomede/pull/177) (`enhance: CI workflow guards and change mypy 2.0`)
 
 For a complete list of changes, see:
@@ -199,13 +199,15 @@ For a complete list of changes, see:
 
 The current prototype is production‑oriented, but not enterprise-ready. If I were to continue this work beyond GSoC, my next steps would be: 
 
+- **Improve system resiliency:** Persist RTT metrics in Redis to accelerate recovery during server restarts, and deploy an Orchestrator cluster to eliminate single-point-of-failure risks.
+  
 - **Policy‑aware routing:** Incorporate additional factors such as modality priority, study urgency, and patient or site‑specific policies into the scoring function instead of relying solely on queue depth, disk, and RTT. 
 
 - **Reduce failover latency:** Experiment with shorter health‑check intervals or push‑based heartbeats to detect node failures faster without overloading nodes.
 
 - **Real‑world workload validation:** Test the system against real scanner traffic and larger‑scale deployments to validate behavior beyond synthetic loads. 
 
-- **Operational tooling and observability:** Extend metrics and dashboards to help operators understand congestion, failure patterns, and routing decisions over time. 
+- **Centralized monitoring and observability:** Configure a centralized dashboard for real-time tracking of regional node loads, routing decisions, and system performance over time. 
 
 ---
 
@@ -231,5 +233,5 @@ Using Redis TTL as a way to detect inactive nodes turned out to be a clean way t
 
 I’m incredibly grateful to my mentors, Dr. Pradeeban Kathiravelu & Ananth Reddy, for their invaluable guidance, code reviews, and continuous support throughout this project. Their feedback helped refine both the architecture and the evaluation approach, and made this a much more rigorous and rewarding experience.
 
-If you’d like to learn more or discuss the project, feel free to reach out to me at **j658huan@uwaterloo.ca**.
+If you’d like to learn more or discuss the project, feel free to reach out to me at **jessihuang07@gmail.com**.
 
