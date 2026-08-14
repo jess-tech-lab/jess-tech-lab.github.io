@@ -24,9 +24,12 @@ Key design goals:
 - **Use live telemetry:** Make routing decisions using queue depth, disk usage, and network latency.
 - **Stay compatible with existing DICOM devices:** Use an edge Orthanc + forwarder so legacy scanners don’t need changes.
 - **Preserve clinical reliability:** Maintain delivery success under node overload, failures, and recoveries.
+
 ---
 
 ## Architecture and components
+
+![Star Topology Architecture](/assets/images/star_topology.png)
 
 Diomede is built as a system of cooperating services; the main components include: 
 
@@ -100,6 +103,8 @@ During GSoC 2026, I focused on delivering an end‑to‑end, measurable system r
 ---
 
 ## Evaluation: performance and reliability
+
+![Locust Routing Decision Latency Benchmark](/assets/images/diomede_locust_10min_figure.png)
 
 I evaluated Diomede from four perspectives: routing decision latency, routing correctness, failover behavior, and end‑to‑end transfer success.
 
