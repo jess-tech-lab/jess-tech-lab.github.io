@@ -104,7 +104,7 @@ During GSoC 2026, I focused on delivering an end‑to‑end, measurable system r
 
 ## Evaluation: performance and reliability
 
-![Locust Routing Decision Latency Benchmark](/assets/images/diomede_locust_10min_figure.png)
+![Locust Routing Decision Latency Benchmark](/assets/images/report.png)
 
 I evaluated Diomede from four perspectives: routing decision latency, routing correctness, failover behavior, and end‑to‑end transfer success.
 
@@ -114,9 +114,9 @@ To understand overhead introduced by the orchestration layer, I measured the `/g
 
 - A **single routing request** completes in roughly **2 ms**.  
 - Under a **60‑second run at 100 concurrent clients**, the orchestrator:  
-  - Processed **84,334 requests**.  
-  - Sustained **≈1,256 requests per second**.  
-  - Achieved **p99 latency of 25 ms**.  
+  - Processed **928k+ requests**.  
+  - Sustained **≈1,473 requests per second**.  
+  - Achieved **p99 latency of 36 ms**.  
   - Recorded **zero failures**.
 
 These results indicate the routing step is lightweight and does not become a bottleneck compared to typical DICOM transfer times. 
