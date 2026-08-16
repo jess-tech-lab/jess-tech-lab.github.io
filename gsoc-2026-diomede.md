@@ -31,7 +31,7 @@ Key design goals:
 
 ![Star Topology Architecture](/assets/images/star_topology.png)
 
-Diomede is built as a system of cooperating services; the main components include: 
+As shown in the architecture above, Diomede is built as a system of cooperating services organized in a star topology; the main components include:
 
 - **Regional Orthanc nodes**  
   Cloud‑hosted Orthanc instances (e.g., in us‑east1, eu‑west1, asia‑northeast1, af‑south1) act as regional PACS endpoints. They expose standard DICOM services plus a REST API for telemetry and ingesting instances via HTTP. 
@@ -100,11 +100,12 @@ During GSoC 2026, I focused on delivering an end‑to‑end, measurable system r
 - **Simulation and benchmarking harness**
   - A synthetic scanner implementation using `asyncio` and `httpx` to generate realistic burst and concurrent traffic.  
   - Automated scripts and Locust harnesses used for evaluating routing latency and end-to-end transfer benchmarks under concurrent load.
+  
 ---
 
 ## Evaluation: performance and reliability
 
-![Locust Routing Decision Latency Benchmark](/assets/images/report.png)
+![Locust Routing Decision Latency Benchmark](/assets/images/locust-report.png)
 
 I evaluated Diomede from four perspectives: routing decision latency, routing correctness, failover behavior, and end‑to‑end transfer success.
 
@@ -112,11 +113,11 @@ I evaluated Diomede from four perspectives: routing decision latency, routing co
 
 To understand overhead introduced by the orchestration layer, I measured the `/get-best-node` endpoint with both single requests and sustained concurrent load.
 
-- A **single routing request** completes in roughly **2 ms**.  
-- Under a **60‑second run at 100 concurrent clients**, the orchestrator:  
-  - Processed **928k+ requests**.  
-  - Sustained **≈1,473 requests per second**.  
-  - Achieved **p99 latency of 36 ms**.  
+- A **single routing request** completes in roughly **4 ms**.  
+- Under a **3.5 minute run at 100 concurrent clients**, the orchestrator:  
+  - Processed **282k+ requests**.  
+  - Sustained **≈1,343 requests per second**.  
+  - Achieved **p99 latency of 17 ms**.  
   - Recorded **zero failures**.
 
 These results indicate the routing step is lightweight and does not become a bottleneck compared to typical DICOM transfer times. 
@@ -202,7 +203,7 @@ For a complete list of changes, see:
 
 ## What’s left and future work
 
-The current prototype is production‑oriented, but not enterprise-ready. If I were to continue this work beyond GSoC, my next steps would be: 
+Further enhancements to make the solution more enterprise-ready could include:
 
 - **Improve system resiliency:** Persist RTT metrics in Redis to accelerate recovery during server restarts, and deploy an Orchestrator cluster to eliminate single-point-of-failure risks.
   
@@ -236,7 +237,7 @@ Using Redis TTL as a way to detect inactive nodes turned out to be a clean way t
 
 ## Acknowledgments
 
-I’m incredibly grateful to my mentors, Dr. Pradeeban Kathiravelu & Ananth Reddy, for their invaluable guidance, code reviews, and continuous support throughout this project. Their feedback helped refine both the architecture and the evaluation approach, and made this a much more rigorous and rewarding experience.
+I’m incredibly grateful to my mentors, Dr. Pradeeban Kathiravelu & Ananth Reddy, for their invaluable guidance, code reviews, and continuous support throughout this project. Their feedback helped refine both the architecture and the evaluation approach and made this a much more rigorous and rewarding experience.
 
 If you’d like to learn more or discuss the project, feel free to reach out to me at **jessihuang07@gmail.com**.
 
